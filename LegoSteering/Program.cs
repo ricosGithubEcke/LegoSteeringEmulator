@@ -8,6 +8,10 @@ using Nefarius.ViGEm.Client.Targets.Xbox360;
 
 class Program
 {
+
+    //beans
+
+
     #region variables
     static bool isRunning = true;
     static int updateRateMs = 50;
