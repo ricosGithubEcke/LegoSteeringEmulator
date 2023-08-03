@@ -1,5 +1,0 @@
-C:\Users\Neu\source\repos\LegoSteering\LegoSteering\obj\Debug\net5.0\LegoSteering.csproj.AssemblyReference.cache
-C:\Users\Neu\source\repos\LegoSteering\LegoSteering\obj\Debug\net5.0\LegoSteering.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\Neu\source\repos\LegoSteering\LegoSteering\obj\Debug\net5.0\LegoSteering.AssemblyInfoInputs.cache
-C:\Users\Neu\source\repos\LegoSteering\LegoSteering\obj\Debug\net5.0\LegoSteering.AssemblyInfo.cs
-C:\Users\Neu\source\repos\LegoSteering\LegoSteering\obj\Debug\net5.0\LegoSteering.csproj.CoreCompileInputs.cache
