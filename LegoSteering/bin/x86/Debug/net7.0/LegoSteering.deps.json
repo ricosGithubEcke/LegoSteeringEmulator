@@ -1,0 +1,69 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v7.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v7.0": {
+      "LegoSteering/1.0.0": {
+        "dependencies": {
+          "Nefarius.ViGEm.Client": "1.21.256",
+          "LibUsbDotNet": "2.2.8.104",
+          "MonoBrick": "1.0.5032.37015"
+        },
+        "runtime": {
+          "LegoSteering.dll": {}
+        }
+      },
+      "Nefarius.ViGEm.Client/1.21.256": {
+        "runtime": {
+          "lib/netstandard2.0/Nefarius.ViGEm.Client.dll": {
+            "assemblyVersion": "1.21.256.0",
+            "fileVersion": "1.21.256.0"
+          }
+        }
+      },
+      "LibUsbDotNet/2.2.8.104": {
+        "runtime": {
+          "LibUsbDotNet.dll": {
+            "assemblyVersion": "2.2.8.104",
+            "fileVersion": "2.2.8.104"
+          }
+        }
+      },
+      "MonoBrick/1.0.5032.37015": {
+        "runtime": {
+          "MonoBrick.dll": {
+            "assemblyVersion": "1.0.5032.37015",
+            "fileVersion": "1.0.5032.37015"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "LegoSteering/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Nefarius.ViGEm.Client/1.21.256": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-VJMO6hkalOZ7YdXTwcR881aTgPZlN7thEs3x6CWE/kEu7SdE5bY7QuDXkR2eqXfPAee4NrxInIAqa45PorpTsA==",
+      "path": "nefarius.vigem.client/1.21.256",
+      "hashPath": "nefarius.vigem.client.1.21.256.nupkg.sha512"
+    },
+    "LibUsbDotNet/2.2.8.104": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "MonoBrick/1.0.5032.37015": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

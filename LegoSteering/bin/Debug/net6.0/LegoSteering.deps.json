@@ -1,0 +1,53 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v6.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v6.0": {
+      "LegoSteering/1.0.0": {
+        "dependencies": {
+          "LibUsbDotNet": "2.2.8.104",
+          "MonoBrick": "1.0.5032.37015"
+        },
+        "runtime": {
+          "LegoSteering.dll": {}
+        }
+      },
+      "LibUsbDotNet/2.2.8.104": {
+        "runtime": {
+          "LibUsbDotNet.dll": {
+            "assemblyVersion": "2.2.8.104",
+            "fileVersion": "2.2.8.104"
+          }
+        }
+      },
+      "MonoBrick/1.0.5032.37015": {
+        "runtime": {
+          "MonoBrick.dll": {
+            "assemblyVersion": "1.0.5032.37015",
+            "fileVersion": "1.0.5032.37015"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "LegoSteering/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "LibUsbDotNet/2.2.8.104": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "MonoBrick/1.0.5032.37015": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
