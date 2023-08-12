@@ -8,27 +8,37 @@ using Nefarius.ViGEm.Client.Targets.Xbox360;
 
 class Program
 {
+
+    //beans
+
+
     #region variables
     static bool isRunning = true;
     static int updateRateMs = 50;
     static int currentGear = 1;
     static int previousGear = 1;
     static int gearShiftSleepTime = 100;
-    static bool doLogInfo = false;
+    static bool doLogInfo = true;
+    static bool enableKeyboardControls = true;
 
     static double steeringWheelRotation;
     static double gasPedalRotation;
     static double brakePedalRotation;
     static bool isClutching;
     static bool wasClutchPressed = false;
+    static bool changeViewButton = false;
 
     static double emulSteer;
     static double emulBrake;
     static double emulGas;
 
-    static int maxSteerRotation = 135;
-    static int maxGasPedalRotation = 50;  
+    static int maxSteerRotation = 540;
+    static int maxGasPedalRotation = 70;  
     static int maxBrakePedalRotation = 50;
+    static int minGasPedalRotation = 10;
+    static int minBrakePedalRotation = 10;
+
+    static int lastGear = -1;
 
     static Motor steeringWheelServo;
     static Motor gasPedalServo;
@@ -40,6 +50,21 @@ class Program
     static ViGEmClient vigemClient;
     static IDualShock4Controller ds4Controller;
     static IXbox360Controller xControlller;
+
+    // Bindings
+
+    //Xbox
+    static Xbox360Axis BSteering = Xbox360Axis.LeftThumbX;
+    static Xbox360Slider BGas = Xbox360Slider.RightTrigger;
+    static Xbox360Slider BBrake = Xbox360Slider.LeftTrigger;
+
+    static Xbox360Button BClutch = Xbox360Button.LeftShoulder;
+    static Xbox360Button BGearUp = Xbox360Button.A;
+    static Xbox360Button BGearDown = Xbox360Button.X;
+
+    static bool doEmulateClutchPedal = false;
+
+
     #endregion
 
     #region Main
@@ -70,6 +95,8 @@ class Program
         ev3.Sensor4 = new IRSensor(IRMode.Proximity);
         clutchXsensor = (IRSensor)ev3.Sensor4;
 
+        
+
         Console.WriteLine("Initialized Sensors");
 
         vigemClient = new ViGEmClient();
@@ -94,11 +121,20 @@ class Program
         {
             CalibrateInput();
         }
+        EmulateXGearUp();
+
+        if (enableKeyboardControls)
+        {
+            EnableKeyboardControls();
+        }
 
 
-        Console.WriteLine("Press any key to stop.              Just kidding");
+        Console.WriteLine("Press B for binding Mode");
 
         previousGear = GetGear();
+        ClearConsole();
+        ConsoleKeyInfo keyInfo;
+        
 
         while (isRunning)
         {
@@ -120,6 +156,15 @@ class Program
             {
                 LogInfo();
             }
+            if(Console.KeyAvailable)
+            {
+                keyInfo = Console.ReadKey(true);
+                if(keyInfo.Key == ConsoleKey.B)
+                {
+                    BindingMode();
+                }
+            }
+            
             //LogSteeringInfo();
 
             //UpdateDualShock4Controller();.............................................DS4
@@ -128,9 +173,7 @@ class Program
             Thread.Sleep(updateRateMs); // Control the update rate.
         }
 
-        // Reset the console after exiting the loop
-        Console.SetCursorPosition(0, 1);
-        Console.WriteLine("                                        ");
+        ClearConsole();
 
         //ds4Controller.Disconnect();//.......................................................DS4
         vigemClient.Dispose();
@@ -179,16 +222,67 @@ class Program
             }
         }
 
+        Console.WriteLine("Input last gear emulation (1 or 6 usually)");
+        lastGear = int.Parse(Console.ReadLine());
+       
+
         Console.WriteLine("Want to log Info  y/n");
-        string doCalibrate = Console.ReadLine();
-        if (doCalibrate == "y")
+        string doLog = Console.ReadLine();
+        if (doLog == "y")
         {
             doLogInfo = true;
         }
+
+        Console.WriteLine("Want to Enable Keyboard extended controls?  y/n");
+        string doKeyCtl = Console.ReadLine();
+        if (doKeyCtl == "y")
+        {
+            enableKeyboardControls = true;
+        }
     }
+
+    static void BindingMode()
+    {
+        bool isRunning = true;
+        ClearConsole();
+        Console.WriteLine("Gas > y > gear Up");
+        Console.WriteLine("Brake > a > gear Down");
+        Console.WriteLine("Press K to exit");
+        ConsoleKeyInfo keyInfo;
+        while (isRunning)
+        {
+            gasPedalRotation = GetGas();
+            brakePedalRotation = GetBrake();
+
+            xControlller.SetButtonState(BGearUp, gasPedalRotation > minGasPedalRotation);
+            xControlller.SetButtonState(BGearDown, brakePedalRotation > minBrakePedalRotation);
+
+
+            if(Console.KeyAvailable)
+            {
+                keyInfo = Console.ReadKey(true);
+                if (keyInfo.Key == ConsoleKey.K)
+                {
+                    isRunning = false;
+                    // Auch Chuck Norris hat als Kind Sandburgen gebaut..... Heute kennen wir sie als die Pyramiden
+                }
+            }
+            
+
+            Thread.Sleep(updateRateMs);
+            
+        }
+    }
+
     #endregion
 
     #region Logging
+    static void ClearConsole()
+    {
+        // Reset the console after exiting the loop
+        Console.SetCursorPosition(0, 1);
+        Console.WriteLine("                                        ");
+    }
     static void LogInfo()
     {
         // Update the console with the latest rotation values
@@ -230,13 +324,16 @@ class Program
     static bool GetClutch()
     {
         int result = clutch.Read();
-
+        if(result == 2)
+        {
+            changeView();
+            return false;
+        }
         if(result == 1)
             return true;
 
        return false;
     }
-
     static bool isPressed = false;
     static void ClutchReleaseListener()
     {
@@ -250,6 +347,46 @@ class Program
 
         // Update the previous state of the touch sensor
         wasClutchPressed = isPressed;
+    }
+    static void EnableKeyboardControls()
+    {
+        Thread keyboardListenerThread = new Thread(() =>
+        {
+            while (isRunning)
+            {
+                // Listen for a key press
+                ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+
+                xControlller.SetButtonState(Xbox360Button.Right, keyInfo.Key == ConsoleKey.RightArrow);
+                xControlller.SetButtonState(Xbox360Button.Left, keyInfo.Key == ConsoleKey.LeftArrow);
+                xControlller.SetButtonState(Xbox360Button.Up, keyInfo.Key == ConsoleKey.UpArrow);
+                xControlller.SetButtonState(Xbox360Button.Down, keyInfo.Key == ConsoleKey.DownArrow);
+
+                xControlller.SetButtonState(Xbox360Button.X , keyInfo.Key == ConsoleKey.X);
+                xControlller.SetButtonState(Xbox360Button.B , keyInfo.Key == ConsoleKey.B);
+
+                xControlller.SetButtonState(Xbox360Button.RightShoulder , keyInfo.Key == ConsoleKey.V);
+
+                xControlller.SubmitReport();
+                Thread.Sleep(100);
+
+                xControlller.SetButtonState(Xbox360Button.Right, false);
+                xControlller.SetButtonState(Xbox360Button.Left, false);
+                xControlller.SetButtonState(Xbox360Button.Up, false);
+                xControlller.SetButtonState(Xbox360Button.Down, false);
+
+                xControlller.SetButtonState(Xbox360Button.X, false);
+                xControlller.SetButtonState(Xbox360Button.B, false);
+
+                xControlller.SetButtonState(Xbox360Button.RightShoulder, false);
+
+                xControlller.SubmitReport();
+                Thread.Sleep(100);
+            }
+        });
+
+        // Start the keyboard input listener thread
+        keyboardListenerThread.Start();
     }
     #endregion
 
@@ -265,45 +402,56 @@ class Program
         // Perform gear up or gear down actions based on the gear difference
         if (gearDifference > 0)
         {
-            // Perform gear up action (triangle button press) 'gearDifference' times
-            for (int i = 0; i < gearDifference; i++)
+            Thread gearUpThread = new Thread(() =>
             {
-                // Call a function to emulate the triangle button press on the emulated controller
-                //EmulateGearUp();.......................................................................................DS4
-                EmulateXGearUp();
-                Console.WriteLine("Gear Up!");
-            }
+                for (int i = 0; i < gearDifference; i++)
+                {
+                    // Call a function to emulate the triangle button press on the emulated controller
+                    //EmulateGearUp();.......................................................................................DS4
+                    EmulateXGearUp();
+                    Console.WriteLine("Gear Up!");
+                }
+            });
+            gearUpThread.Start();
+                // Perform gear up action (triangle button press) 'gearDifference' times
+                
         }
         else if (gearDifference < 0)
         {
-            // Perform gear down action (X button press) 'abs(gearDifference)' times
-            for (int i = 0; i < Math.Abs(gearDifference); i++)
+            Thread gearDownThread = new Thread(() =>
             {
-                // Call a function to emulate the X button press on the emulated controller
-                //EmulateGearDown();
-                EmulateXGearDown();
-                Console.WriteLine("Gear Down!");
-            }
+                // Perform gear down action (X button press) 'abs(gearDifference)' times
+                for (int i = 0; i < Math.Abs(gearDifference); i++)
+                {
+                    // Call a function to emulate the X button press on the emulated controller
+                    //EmulateGearDown();
+                    EmulateXGearDown();
+                    Console.WriteLine("Gear Down!");
+                }
+            });
+            gearDownThread.Start();
         }
 
         // Update the previous gear state to the current gear
         previousGear = currentGear;
 
-        Thread releaseClutch = new Thread(() =>
+        if (doEmulateClutchPedal)
         {
-            int sleepTime = gearShiftSleepTime * Math.Abs(gearDifference) * 2 + 50;
-            Thread.Sleep(sleepTime);
 
-            xControlller.SetButtonState(Xbox360Button.LeftShoulder, false);
-        });
-        releaseClutch.Start();
+            Thread releaseClutch = new Thread(() =>
+            {
+                int sleepTime = gearShiftSleepTime * Math.Abs(gearDifference) * 2 + 50 + gearShiftSleepTime;
+                Thread.Sleep(sleepTime);
+
+                xControlller.SetButtonState(Xbox360Button.LeftShoulder, false);
+            });
+            releaseClutch.Start();
+        }
     }
 
     static void EmulateGearUp()
     {
 
-        Thread gearUpThread = new Thread(() =>
-        {
                 Thread.Sleep(gearShiftSleepTime);
 
                 ds4Controller.SetButtonState(DualShock4Button.Triangle, true);
@@ -313,33 +461,28 @@ class Program
 
                 ds4Controller.SetButtonState(DualShock4Button.Triangle, false);
                 ds4Controller.SubmitReport();
-        });
-        gearUpThread.Start();
+       
 
         
     }
     static void EmulateXGearUp()
     {
-        Thread gearUpThread = new Thread(() =>
-        {
+        
             Thread.Sleep(gearShiftSleepTime);
 
-            xControlller.SetButtonState(Xbox360Button.Y, true);
+            xControlller.SetButtonState(BGearUp, true);
             xControlller.SubmitReport();
 
             Thread.Sleep(gearShiftSleepTime);
 
-            xControlller.SetButtonState(Xbox360Button.Y, false);
+            xControlller.SetButtonState(BGearUp, false);
             xControlller.SubmitReport();
-        });
-        gearUpThread.Start();
+       
 
     }
 
     static void EmulateGearDown()
     {
-        Thread gearDownThread = new Thread(() =>
-        {
             Thread.Sleep(gearShiftSleepTime);
 
             ds4Controller.SetButtonState(DualShock4Button.Cross, true);
@@ -349,30 +492,34 @@ class Program
 
             ds4Controller.SetButtonState(DualShock4Button.Cross, false);
             ds4Controller.SubmitReport();
-        });
-        gearDownThread.Start();
         
     }
     static void EmulateXGearDown()
     {
-        Thread gearDownThread = new Thread(() =>
-        {
             Thread.Sleep(gearShiftSleepTime);
 
-            xControlller.SetButtonState(Xbox360Button.A, true);
+            xControlller.SetButtonState(BGearDown, true);
             xControlller.SubmitReport();
 
             Thread.Sleep(gearShiftSleepTime);
 
-            xControlller.SetButtonState(Xbox360Button.A, false);
+            xControlller.SetButtonState(BGearDown, false);
             xControlller.SubmitReport();
-        });
-        gearDownThread.Start();
         
     }
 
     static bool shiftGearUp = false;
     static bool shiftGearDown = false;
+
+    static void changeView()
+    {
+        xControlller.SetButtonState(Xbox360Button.RightShoulder, true);
+        xControlller.SubmitReport();
+        Thread.Sleep(100);
+        xControlller.SetButtonState(Xbox360Button.RightShoulder, false);
+        xControlller.SubmitReport();
+        Thread.Sleep(100);
+    }
     
 
     static void UpdateDualShock4Controller()
@@ -392,17 +539,17 @@ class Program
     }
     static void UpdateXCOntroller()
     {
-        xControlller.SetAxisValue(Xbox360Axis.LeftThumbX, (short)(GetXEmulSteer() * short.MaxValue));
+        xControlller.SetAxisValue(BSteering, (short)(GetXEmulSteer() * short.MaxValue));
 
         byte gasValue = (byte)(emulGas * 255);
-        xControlller.SetSliderValue(Xbox360Slider.RightTrigger, gasValue);
+        xControlller.SetSliderValue(BGas, gasValue);
 
         byte brakeValue = (byte)(emulBrake * 255);
-        xControlller.SetSliderValue(Xbox360Slider.LeftTrigger, brakeValue);
+        xControlller.SetSliderValue(BBrake, brakeValue);
 
-        if(isClutching) // Enables clutch on press, but doesnt disable
+        if(isClutching && doEmulateClutchPedal) // Enables clutch on press, but doesnt disable
         {
-            xControlller.SetButtonState(Xbox360Button.LeftShoulder, true);
+            xControlller.SetButtonState(BClutch, true);
         }
     }
     #endregion
@@ -427,6 +574,7 @@ class Program
 
     static double GetEmulGas()
     {
+        if (gasPedalRotation < minGasPedalRotation) return 0;
         double emulGas = gasPedalRotation / maxGasPedalRotation;
         emulGas = Math.Max(Math.Min(emulGas, 1), 0);
         return emulGas;
@@ -434,6 +582,7 @@ class Program
 
     static double GetEmulBrake()
     {
+        if (brakePedalRotation < minBrakePedalRotation) return 0;
         double emulBrake = brakePedalRotation / maxBrakePedalRotation;
         emulBrake = Math.Max(Math.Min(emulBrake, 1), 0);
         return emulBrake;
@@ -445,35 +594,33 @@ class Program
         int colorSensorValue = clutchYsensor.Read();
 
         // Determine the gear based on IR sensor and color sensor values
-        if (irSensorValue >= 9 && irSensorValue <= 11 && colorSensorValue > 50)
+        if (irSensorValue >= 11 && irSensorValue <= 15 && colorSensorValue > 25)
         {
             return 1;
         }
-        else if (irSensorValue >= 9 && irSensorValue <= 11 && colorSensorValue < 50)
+        else if (irSensorValue >= 11 && irSensorValue <= 15 && colorSensorValue < 25)
         {
             return 2;
         }
-        else if (irSensorValue >= 6 && irSensorValue <= 11 && colorSensorValue > 50)
+        else if (irSensorValue >= 8 && irSensorValue <= 10 && colorSensorValue > 25)
         {
             return 3;
         }
-        else if (irSensorValue >= 6 && irSensorValue <= 8 && colorSensorValue < 50)
+        else if (irSensorValue >= 8 && irSensorValue <= 10 && colorSensorValue < 25)
         {
             return 4;
         }
-        else if (irSensorValue >= 2 && irSensorValue <= 5 && colorSensorValue > 50)
+        else if (irSensorValue >= 1 && irSensorValue <= 7 && colorSensorValue > 25)
         {
             return 5;
         }
-        else if (irSensorValue >= 2 && irSensorValue <= 5 && colorSensorValue < 50)
+        else if (irSensorValue >= 1 && irSensorValue <= 7 && colorSensorValue < 25)
         {
-            return 6;
+            return lastGear;
         }
-        else
-        {
+        
             // Default to neutral (you may adjust this based on your requirement)
-            return 0;
-        }
+            return 7;
     }
     #endregion
 }
